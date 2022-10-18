@@ -1,0 +1,94 @@
+ruby-prof(1) -- A fast ruby profiler
+=============================================
+
+## SYNOPSIS
+
+`ruby-prof` [options] <script.rb> [--] [profiled-script-command-line-options]
+
+## DESCRIPTION
+
+**ruby-prof** is a fast profiler for ruby. It can be used as a stand-alone
+program (that this man page documents) or as a ruby library. Simply run
+the ruby program you want to profile using ruby-prof : **ruby-prof script.rb**
+ At the end of execution the time spent in each method is displayed.
+
+## OPTIONS
+
+  * `-p`, `--printer=printer`:
+    Select a printer:<br>
+      flat - Prints a flat profile as text (default).<br>
+      flat_with_line_numbers - same as flat, with line numbers.<br>
+      graph - Prints a graph profile as text.<br>
+      graph_html - Prints a graph profile as html.<br>
+      call_tree - format for KCacheGrind<br>
+      call_stack - prints a HTML visualization of the call tree<br>
+      dot - Prints a graph profile as a dot file<br>
+
+  * `-m`, `--min_percent=min_percent`:
+    The minimum percent a method must take before being included in output reports.
+    this option is not supported for call tree.
+
+  * `-f`, `--file=path`:
+    Output results to a file instead of standard out.
+
+  * `--mode=measure_mode`:
+    Select what ruby-prof should measure:<br>
+      process - Process time (default).<br>
+      wall - Wall time.<br>
+      cpu - CPU time (Pentium and PowerPCs only).<br>
+      allocations - Object allocations (requires patched Ruby interpreter).<br>
+      memory - Allocated memory in KB (requires patched Ruby interpreter).<br>
+      gc_runs - Number of garbage collections (requires patched Ruby interpreter).<br>
+      gc_time - Time spent in garbage collection (requires patched Ruby interpreter).<br>
+
+  * `-s`, `--sort=sort_mode`:
+    Select how ruby-prof results should be sorted:<br>
+      total - Total time<br>
+      self - Self time<br>
+      wait - Wait time<br>
+      child - Child time<br>
+
+  * `--replace-progname`:
+    Replace $0 when loading the .rb files.
+
+  * `-v`:
+    Show version, set $VERBOSE to true, profile script if option given
+
+  * `-d`:
+    Set $DEBUG to true
+
+  * `-R`, `--require-noprof lib`:
+    require a specific library (not profiled)
+
+  * `-E`, `--eval-noprof code`:
+    execute the ruby statements (not profiled)
+
+  * `-x`, `--exclude regexp`:
+    exclude methods by regexp (see method elimination)
+
+  * `-X`, `--exclude-file file`:
+    exclude methods by regexp listed in file (see method elimination)
+
+  * `--exclude-common-cycles`:
+    make common iterators like Integer#times appear inlined
+
+  * `--exclude-common-callbacks`:
+    make common callbacks invocations like Integer#times appear inlined so you can see call origins in graph
+
+  * `-h`, `--help`:
+    Show help message
+
+  * `--version`:
+    Show version 0.13.1
+
+
+## COPYRIGHT
+
+ruby-prof was written by Shugo Maeda <shugo@ruby-lang.org>.
+
+This manual page was written by Arnaud Cornet <arnaud.cornet@gmail.com> and
+updated by Jonas Genannt <jonas.genannt@capi2name.de> for the Debian project (but may be used by others).
+
+## SEE ALSO
+
+The ruby-prof website, https://github.com/ruby-prof/ruby-prof

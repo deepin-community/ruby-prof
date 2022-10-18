@@ -1,0 +1,151 @@
+.\" generated with Ronn/v0.7.3
+.\" http://github.com/rtomayko/ronn/tree/0.7.3
+.
+.TH "RUBY\-PROF" "1" "December 2013" "" ""
+.
+.SH "NAME"
+\fBruby\-prof\fR \- A fast ruby profiler
+.
+.SH "SYNOPSIS"
+\fBruby\-prof\fR \fIoptions\fR <script\.rb> [\-\-] [profiled\-script\-command\-line\-options]
+.
+.SH "DESCRIPTION"
+\fBruby\-prof\fR is a fast profiler for ruby\. It can be used as a stand\-alone program (that this man page documents) or as a ruby library\. Simply run the ruby program you want to profile using ruby\-prof : \fBruby\-prof script\.rb\fR At the end of execution the time spent in each method is displayed\.
+.
+.SH "OPTIONS"
+.
+.TP
+\fB\-p\fR, \fB\-\-printer=printer\fR
+Select a printer:
+.
+.br
+flat \- Prints a flat profile as text (default)\.
+.
+.br
+flat_with_line_numbers \- same as flat, with line numbers\.
+.
+.br
+graph \- Prints a graph profile as text\.
+.
+.br
+graph_html \- Prints a graph profile as html\.
+.
+.br
+call_tree \- format for KCacheGrind
+.
+.br
+call_stack \- prints a HTML visualization of the call tree
+.
+.br
+dot \- Prints a graph profile as a dot file
+.
+.br
+
+.
+.TP
+\fB\-m\fR, \fB\-\-min_percent=min_percent\fR
+The minimum percent a method must take before being included in output reports\. this option is not supported for call tree\.
+.
+.TP
+\fB\-f\fR, \fB\-\-file=path\fR
+Output results to a file instead of standard out\.
+.
+.TP
+\fB\-\-mode=measure_mode\fR
+Select what ruby\-prof should measure:
+.
+.br
+process \- Process time (default)\.
+.
+.br
+wall \- Wall time\.
+.
+.br
+cpu \- CPU time (Pentium and PowerPCs only)\.
+.
+.br
+allocations \- Object allocations (requires patched Ruby interpreter)\.
+.
+.br
+memory \- Allocated memory in KB (requires patched Ruby interpreter)\.
+.
+.br
+gc_runs \- Number of garbage collections (requires patched Ruby interpreter)\.
+.
+.br
+gc_time \- Time spent in garbage collection (requires patched Ruby interpreter)\.
+.
+.br
+
+.
+.TP
+\fB\-s\fR, \fB\-\-sort=sort_mode\fR
+Select how ruby\-prof results should be sorted:
+.
+.br
+total \- Total time
+.
+.br
+self \- Self time
+.
+.br
+wait \- Wait time
+.
+.br
+child \- Child time
+.
+.br
+
+.
+.TP
+\fB\-\-replace\-progname\fR
+Replace $0 when loading the \.rb files\.
+.
+.TP
+\fB\-v\fR
+Show version, set $VERBOSE to true, profile script if option given
+.
+.TP
+\fB\-d\fR
+Set $DEBUG to true
+.
+.TP
+\fB\-R\fR, \fB\-\-require\-noprof lib\fR
+require a specific library (not profiled)
+.
+.TP
+\fB\-E\fR, \fB\-\-eval\-noprof code\fR
+execute the ruby statements (not profiled)
+.
+.TP
+\fB\-x\fR, \fB\-\-exclude regexp\fR
+exclude methods by regexp (see method elimination)
+.
+.TP
+\fB\-X\fR, \fB\-\-exclude\-file file\fR
+exclude methods by regexp listed in file (see method elimination)
+.
+.TP
+\fB\-\-exclude\-common\-cycles\fR
+make common iterators like Integer#times appear inlined
+.
+.TP
+\fB\-\-exclude\-common\-callbacks\fR
+make common callbacks invocations like Integer#times appear inlined so you can see call origins in graph
+.
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Show help message
+.
+.TP
+\fB\-\-version\fR
+Show version 0\.13\.1
+.
+.SH "COPYRIGHT"
+ruby\-prof was written by Shugo Maeda \fIshugo@ruby\-lang\.org\fR\.
+.
+.P
+This manual page was written by Arnaud Cornet \fIarnaud\.cornet@gmail\.com\fR and updated by Jonas Genannt \fIjonas\.genannt@capi2name\.de\fR for the Debian project (but may be used by others)\.
+.
+.SH "SEE ALSO"
+The ruby\-prof website, https://github\.com/ruby\-prof/ruby\-prof

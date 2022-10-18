@@ -1,0 +1,31 @@
+Source: ruby-prof
+Section: ruby
+Priority: optional
+Maintainer: Debian Ruby Extras Maintainers <pkg-ruby-extras-maintainers@lists.alioth.debian.org>
+Uploaders: Pirate Praveen <praveen@debian.org>
+Build-Depends: debhelper-compat (= 12),
+               gem2deb (>= 1.1),
+               rake
+Standards-Version: 4.5.0
+Vcs-Git: https://salsa.debian.org/ruby-team/ruby-prof.git
+Vcs-Browser: https://salsa.debian.org/ruby-team/ruby-prof
+Homepage: https://github.com/ruby-prof/ruby-prof
+Testsuite: autopkgtest-pkg-ruby
+XS-Ruby-Versions: all
+
+Package: ruby-prof
+Architecture: any
+XB-Ruby-Versions: ${ruby:Versions}
+Depends: ruby | ruby-interpreter,
+         libjs-jquery,
+         fonts-lato,
+         ${misc:Depends},
+         ${shlibs:Depends}
+Breaks: gitlab (<< 12.3~)
+Description: Fast Ruby profiler
+ ruby-prof is a fast code profiler for Ruby. It is a C extension and
+ therefore is many times faster than the standard Ruby profiler. It
+ supports both flat and graph profiles.  For each method, graph profiles
+ show how long the method ran, which methods called it and which
+ methods it called. RubyProf generate both text and html and can output
+ it to standard out or to a file.

@@ -1,0 +1,5 @@
+ruby-prof
+========================
+
+The images that upstream installs into vendor_ruby/ruby-prof/images are
+available in /usr/share/ruby-prof/images/ in Debian.

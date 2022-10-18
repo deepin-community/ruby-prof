@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv='content-type' value='text/html;charset=utf8'>
+  <meta name='generator' value='Ronn/v0.7.3 (http://github.com/rtomayko/ronn/tree/0.7.3)'>
+  <title>ruby-prof(1) - A fast ruby profiler</title>
+  <style type='text/css' media='all'>
+  /* style: man */
+  body#manpage {margin:0}
+  .mp {max-width:100ex;padding:0 9ex 1ex 4ex}
+  .mp p,.mp pre,.mp ul,.mp ol,.mp dl {margin:0 0 20px 0}
+  .mp h2 {margin:10px 0 0 0}
+  .mp > p,.mp > pre,.mp > ul,.mp > ol,.mp > dl {margin-left:8ex}
+  .mp h3 {margin:0 0 0 4ex}
+  .mp dt {margin:0;clear:left}
+  .mp dt.flush {float:left;width:8ex}
+  .mp dd {margin:0 0 0 9ex}
+  .mp h1,.mp h2,.mp h3,.mp h4 {clear:left}
+  .mp pre {margin-bottom:20px}
+  .mp pre+h2,.mp pre+h3 {margin-top:22px}
+  .mp h2+pre,.mp h3+pre {margin-top:5px}
+  .mp img {display:block;margin:auto}
+  .mp h1.man-title {display:none}
+  .mp,.mp code,.mp pre,.mp tt,.mp kbd,.mp samp,.mp h3,.mp h4 {font-family:monospace;font-size:14px;line-height:1.42857142857143}
+  .mp h2 {font-size:16px;line-height:1.25}
+  .mp h1 {font-size:20px;line-height:2}
+  .mp {text-align:justify;background:#fff}
+  .mp,.mp code,.mp pre,.mp pre code,.mp tt,.mp kbd,.mp samp {color:#131211}
+  .mp h1,.mp h2,.mp h3,.mp h4 {color:#030201}
+  .mp u {text-decoration:underline}
+  .mp code,.mp strong,.mp b {font-weight:bold;color:#131211}
+  .mp em,.mp var {font-style:italic;color:#232221;text-decoration:none}
+  .mp a,.mp a:link,.mp a:hover,.mp a code,.mp a pre,.mp a tt,.mp a kbd,.mp a samp {color:#0000ff}
+  .mp b.man-ref {font-weight:normal;color:#434241}
+  .mp pre {padding:0 4ex}
+  .mp pre code {font-weight:normal;color:#434241}
+  .mp h2+pre,h3+pre {padding-left:0}
+  ol.man-decor,ol.man-decor li {margin:3px 0 10px 0;padding:0;float:left;width:33%;list-style-type:none;text-transform:uppercase;color:#999;letter-spacing:1px}
+  ol.man-decor {width:100%}
+  ol.man-decor li.tl {text-align:left}
+  ol.man-decor li.tc {text-align:center;letter-spacing:4px}
+  ol.man-decor li.tr {text-align:right;float:right}
+  </style>
+</head>
+<!--
+  The following styles are deprecated and will be removed at some point:
+  div#man, div#man ol.man, div#man ol.head, div#man ol.man.
+
+  The .man-page, .man-decor, .man-head, .man-foot, .man-title, and
+  .man-navigation should be used instead.
+-->
+<body id='manpage'>
+  <div class='mp' id='man'>
+
+  <div class='man-navigation' style='display:none'>
+    <a href="#NAME">NAME</a>
+    <a href="#SYNOPSIS">SYNOPSIS</a>
+    <a href="#DESCRIPTION">DESCRIPTION</a>
+    <a href="#OPTIONS">OPTIONS</a>
+    <a href="#COPYRIGHT">COPYRIGHT</a>
+    <a href="#SEE-ALSO">SEE ALSO</a>
+  </div>
+
+  <ol class='man-decor man-head man head'>
+    <li class='tl'>ruby-prof(1)</li>
+    <li class='tc'></li>
+    <li class='tr'>ruby-prof(1)</li>
+  </ol>
+
+  <h2 id="NAME">NAME</h2>
+<p class="man-name">
+  <code>ruby-prof</code> - <span class="man-whatis">A fast ruby profiler</span>
+</p>
+
+<h2 id="SYNOPSIS">SYNOPSIS</h2>
+
+<p><code>ruby-prof</code> <a href="#OPTIONS" title="OPTIONS" data-bare-link="true">options</a> &lt;script.rb> [--] [profiled-script-command-line-options]</p>
+
+<h2 id="DESCRIPTION">DESCRIPTION</h2>
+
+<p><strong>ruby-prof</strong> is a fast profiler for ruby. It can be used as a stand-alone
+program (that this man page documents) or as a ruby library. Simply run
+the ruby program you want to profile using ruby-prof : <strong>ruby-prof script.rb</strong>
+ At the end of execution the time spent in each method is displayed.</p>
+
+<h2 id="OPTIONS">OPTIONS</h2>
+
+<dl>
+<dt><code>-p</code>, <code>--printer=printer</code></dt><dd><p>Select a printer:<br />
+  flat - Prints a flat profile as text (default).<br />
+  flat_with_line_numbers - same as flat, with line numbers.<br />
+  graph - Prints a graph profile as text.<br />
+  graph_html - Prints a graph profile as html.<br />
+  call_tree - format for KCacheGrind<br />
+  call_stack - prints a HTML visualization of the call tree<br />
+  dot - Prints a graph profile as a dot file<br /></p></dd>
+<dt><code>-m</code>, <code>--min_percent=min_percent</code></dt><dd><p>The minimum percent a method must take before being included in output reports.
+this option is not supported for call tree.</p></dd>
+<dt><code>-f</code>, <code>--file=path</code></dt><dd><p>Output results to a file instead of standard out.</p></dd>
+<dt><code>--mode=measure_mode</code></dt><dd><p>Select what ruby-prof should measure:<br />
+  process - Process time (default).<br />
+  wall - Wall time.<br />
+  cpu - CPU time (Pentium and PowerPCs only).<br />
+  allocations - Object allocations (requires patched Ruby interpreter).<br />
+  memory - Allocated memory in KB (requires patched Ruby interpreter).<br />
+  gc_runs - Number of garbage collections (requires patched Ruby interpreter).<br />
+  gc_time - Time spent in garbage collection (requires patched Ruby interpreter).<br /></p></dd>
+<dt><code>-s</code>, <code>--sort=sort_mode</code></dt><dd><p>Select how ruby-prof results should be sorted:<br />
+  total - Total time<br />
+  self - Self time<br />
+  wait - Wait time<br />
+  child - Child time<br /></p></dd>
+<dt><code>--replace-progname</code></dt><dd><p>Replace $0 when loading the .rb files.</p></dd>
+<dt class="flush"><code>-v</code></dt><dd><p>Show version, set $VERBOSE to true, profile script if option given</p></dd>
+<dt class="flush"><code>-d</code></dt><dd><p>Set $DEBUG to true</p></dd>
+<dt><code>-R</code>, <code>--require-noprof lib</code></dt><dd><p>require a specific library (not profiled)</p></dd>
+<dt><code>-E</code>, <code>--eval-noprof code</code></dt><dd><p>execute the ruby statements (not profiled)</p></dd>
+<dt><code>-x</code>, <code>--exclude regexp</code></dt><dd><p>exclude methods by regexp (see method elimination)</p></dd>
+<dt><code>-X</code>, <code>--exclude-file file</code></dt><dd><p>exclude methods by regexp listed in file (see method elimination)</p></dd>
+<dt><code>--exclude-common-cycles</code></dt><dd><p>make common iterators like Integer#times appear inlined</p></dd>
+<dt><code>--exclude-common-callbacks</code></dt><dd><p>make common callbacks invocations like Integer#times appear inlined so you can see call origins in graph</p></dd>
+<dt><code>-h</code>, <code>--help</code></dt><dd><p>Show help message</p></dd>
+<dt><code>--version</code></dt><dd><p>Show version 0.13.1</p></dd>
+</dl>
+
+
+<h2 id="COPYRIGHT">COPYRIGHT</h2>
+
+<p>ruby-prof was written by Shugo Maeda <a href="&#x6d;&#x61;&#x69;&#x6c;&#116;&#x6f;&#x3a;&#115;&#104;&#117;&#x67;&#111;&#64;&#x72;&#x75;&#x62;&#x79;&#x2d;&#108;&#x61;&#110;&#103;&#46;&#111;&#x72;&#103;" data-bare-link="true">&#115;&#x68;&#x75;&#103;&#x6f;&#64;&#x72;&#x75;&#98;&#x79;&#45;&#x6c;&#97;&#x6e;&#103;&#x2e;&#x6f;&#114;&#103;</a>.</p>
+
+<p>This manual page was written by Arnaud Cornet <a href="&#109;&#97;&#x69;&#x6c;&#116;&#x6f;&#58;&#97;&#x72;&#110;&#x61;&#x75;&#100;&#46;&#99;&#111;&#114;&#110;&#101;&#x74;&#64;&#x67;&#x6d;&#97;&#x69;&#108;&#46;&#x63;&#x6f;&#109;" data-bare-link="true">&#x61;&#x72;&#110;&#x61;&#x75;&#x64;&#46;&#x63;&#x6f;&#x72;&#x6e;&#x65;&#116;&#64;&#x67;&#109;&#97;&#x69;&#108;&#46;&#99;&#x6f;&#109;</a> and
+updated by Jonas Genannt <a href="&#109;&#x61;&#x69;&#108;&#x74;&#111;&#58;&#x6a;&#111;&#x6e;&#97;&#x73;&#46;&#x67;&#x65;&#x6e;&#97;&#110;&#x6e;&#x74;&#64;&#x63;&#x61;&#112;&#x69;&#50;&#110;&#97;&#x6d;&#x65;&#46;&#x64;&#101;" data-bare-link="true">&#x6a;&#x6f;&#x6e;&#97;&#x73;&#x2e;&#103;&#x65;&#x6e;&#x61;&#x6e;&#110;&#116;&#x40;&#99;&#97;&#112;&#105;&#50;&#x6e;&#x61;&#109;&#101;&#x2e;&#100;&#101;</a> for the Debian project (but may be used by others).</p>
+
+<h2 id="SEE-ALSO">SEE ALSO</h2>
+
+<p>The ruby-prof website, https://github.com/ruby-prof/ruby-prof</p>
+
+
+  <ol class='man-decor man-foot man foot'>
+    <li class='tl'></li>
+    <li class='tc'>December 2013</li>
+    <li class='tr'>ruby-prof(1)</li>
+  </ol>
+
+  </div>
+</body>
+</html>

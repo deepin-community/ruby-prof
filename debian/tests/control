@@ -1,0 +1,3 @@
+Test-Command: ruby-prof --help
+Features: test-name=ruby-prof-help
+Restrictions: superficial
