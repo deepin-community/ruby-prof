@@ -4,6 +4,17 @@
 #include "rp_allocation.h"
 #include "rp_call_trees.h"
 #include "rp_method.h"
+#include "rp_profile.h"
+
+#include <ruby/version.h>
+
+// Needed for Ruby 3.0.* and 3.1.*
+#if RUBY_API_VERSION_MAJOR == 3 && RUBY_API_VERSION_MINOR < 2
+   VALUE rb_class_attached_object(VALUE klass)
+   {
+     return rb_iv_get(klass, "__attached__");
+   }
+#endif
 
 VALUE cRpMethodInfo;
 
@@ -20,33 +31,40 @@ VALUE resolve_klass(VALUE klass, unsigned int* klass_flags)
     {
         /* We have come across a singleton object. First
            figure out what it is attached to.*/
-        VALUE attached = rb_iv_get(klass, "__attached__");
+        VALUE attached = rb_class_attached_object(klass);
 
-        /* Is this a singleton class acting as a metaclass? */
-        if (BUILTIN_TYPE(attached) == T_CLASS)
+        switch (BUILTIN_TYPE(attached))
         {
-            *klass_flags |= kClassSingleton;
-            result = attached;
-        }
-        /* Is this for singleton methods on a module? */
-        else if (BUILTIN_TYPE(attached) == T_MODULE)
-        {
-            *klass_flags |= kModuleSingleton;
-            result = attached;
-        }
-        /* Is this for singleton methods on an object? */
-        else if (BUILTIN_TYPE(attached) == T_OBJECT)
-        {
-            *klass_flags |= kObjectSingleton;
-            result = rb_class_superclass(klass);
-        }
-        /* Ok, this could be other things like an array made put onto
-           a singleton object (yeah, it happens, see the singleton
-           objects test case). */
-        else
-        {
-            *klass_flags |= kOtherSingleton;
-            result = klass;
+            /* Is this a singleton class acting as a metaclass? */
+            case T_CLASS:
+            {
+                *klass_flags |= kClassSingleton;
+                result = attached;
+                break;
+            }
+            /* Is this for singleton methods on a module? */
+            case T_MODULE:
+            {
+                *klass_flags |= kModuleSingleton;
+                result = attached;
+                break;
+            }
+            /* Is this for singleton methods on an object? */
+            case T_OBJECT:
+            {
+                *klass_flags |= kObjectSingleton;
+                result = rb_class_superclass(klass);
+                break;
+            }
+            /* Ok, this could be other things like an array put onto
+               a singleton object (yeah, it happens, see the singleton
+               objects test case). */
+            default:
+            {
+                *klass_flags |= kOtherSingleton;
+                result = klass;
+                break;
+            }
         }
     }
     /* Is this an include for a module?  If so get the actual
@@ -56,7 +74,7 @@ VALUE resolve_klass(VALUE klass, unsigned int* klass_flags)
     {
         unsigned int dummy;
         *klass_flags |= kModuleIncludee;
-        result = resolve_klass(RBASIC(klass)->klass, &dummy);
+        result = resolve_klass(RBASIC_CLASS(klass), &dummy);
     }
     return result;
 }
@@ -94,43 +112,15 @@ st_data_t method_key(VALUE klass, VALUE msym)
     }
     else if (BUILTIN_TYPE(klass) == T_ICLASS)
     {
-        resolved_klass = RBASIC(klass)->klass;
+        resolved_klass = RBASIC_CLASS(klass);
     }
 
-    return (resolved_klass << 4) + (msym);
-}
+    st_data_t hash = rb_hash_start(0);
+    hash = rb_hash_uint(hash, resolved_klass);
+    hash = rb_hash_uint(hash, msym);
+    hash = rb_hash_end(hash);
 
-/* ======   Allocation Table  ====== */
-st_table* allocations_table_create()
-{
-    return rb_st_init_numtable();
-}
-
-static int allocations_table_free_iterator(st_data_t key, st_data_t value, st_data_t dummy)
-{
-    prof_allocation_free((prof_allocation_t*)value);
-    return ST_CONTINUE;
-}
-
-static int prof_method_collect_allocations(st_data_t key, st_data_t value, st_data_t result)
-{
-    prof_allocation_t* allocation = (prof_allocation_t*)value;
-    VALUE arr = (VALUE)result;
-    rb_ary_push(arr, prof_allocation_wrap(allocation));
-    return ST_CONTINUE;
-}
-
-static int prof_method_mark_allocations(st_data_t key, st_data_t value, st_data_t data)
-{
-    prof_allocation_t* allocation = (prof_allocation_t*)value;
-    prof_allocation_mark(allocation);
-    return ST_CONTINUE;
-}
-
-void allocations_table_free(st_table* table)
-{
-    rb_st_foreach(table, allocations_table_free_iterator, 0);
-    rb_st_free_table(table);
+    return hash;
 }
 
 /* ================  prof_method_t   =================*/
@@ -146,7 +136,7 @@ prof_method_t* prof_get_method(VALUE self)
     return result;
 }
 
-prof_method_t* prof_method_create(VALUE profile, VALUE klass, VALUE msym, VALUE source_file, int source_line)
+prof_method_t* prof_method_create(struct prof_profile_t* profile, VALUE klass, VALUE msym, VALUE source_file, int source_line)
 {
     prof_method_t* result = ALLOC(prof_method_t);
     result->profile = profile;
@@ -162,7 +152,7 @@ prof_method_t* prof_method_create(VALUE profile, VALUE klass, VALUE msym, VALUE 
     result->measurement = prof_measurement_create();
 
     result->call_trees = prof_call_trees_create();
-    result->allocations_table = allocations_table_create();
+    result->allocations_table = prof_allocations_create();
 
     result->visits = 0;
     result->recursive = false;
@@ -171,6 +161,14 @@ prof_method_t* prof_method_create(VALUE profile, VALUE klass, VALUE msym, VALUE 
 
     result->source_file = source_file;
     result->source_line = source_line;
+
+    return result;
+}
+
+prof_method_t* prof_method_copy(prof_method_t* other)
+{
+    prof_method_t* result = prof_method_create(other->profile, other->klass, other->method_name, other->source_file, other->source_line);
+    result->measurement = prof_measurement_copy(other->measurement);
 
     return result;
 }
@@ -200,7 +198,7 @@ static void prof_method_free(prof_method_t* method)
         method->object = Qnil;
     }
 
-    allocations_table_free(method->allocations_table);
+    prof_allocations_free(method->allocations_table);
     prof_call_trees_free(method->call_trees);
     prof_measurement_free(method->measurement);
     xfree(method);
@@ -217,11 +215,13 @@ void prof_method_mark(void* data)
 
     prof_method_t* method = (prof_method_t*)data;
 
-    if (method->profile != Qnil)
-        rb_gc_mark(method->profile);
-
     if (method->object != Qnil)
-        rb_gc_mark(method->object);
+      rb_gc_mark_movable(method->object);
+
+    // Mark the profile to keep it alive. Can't call prof_profile_mark because that would
+    // cause recursion
+    if (method->profile && method->profile->object != Qnil)
+        rb_gc_mark(method->profile->object);
 
     rb_gc_mark(method->klass_name);
     rb_gc_mark(method->method_name);
@@ -231,13 +231,20 @@ void prof_method_mark(void* data)
         rb_gc_mark(method->klass);
 
     prof_measurement_mark(method->measurement);
+    prof_allocations_mark(method->allocations_table);
+}
 
-    rb_st_foreach(method->allocations_table, prof_method_mark_allocations, 0);
+void prof_method_compact(void* data)
+{
+    prof_method_t* method = (prof_method_t*)data;
+    method->object = rb_gc_location(method->object);
+    method->klass_name = rb_gc_location(method->klass_name);
+    method->method_name = rb_gc_location(method->method_name);
 }
 
 static VALUE prof_method_allocate(VALUE klass)
 {
-    prof_method_t* method_data = prof_method_create(Qnil, Qnil, Qnil, Qnil, 0);
+    prof_method_t* method_data = prof_method_create(NULL, Qnil, Qnil, Qnil, 0);
     method_data->object = prof_method_wrap(method_data);
     return method_data->object;
 }
@@ -250,10 +257,11 @@ static const rb_data_type_t method_info_type =
         .dmark = prof_method_mark,
         .dfree = prof_method_ruby_gc_free,
         .dsize = prof_method_size,
+        .dcompact = prof_method_compact
     },
     .data = NULL,
     .flags = RUBY_TYPED_FREE_IMMEDIATELY
-}; 
+};
 
 VALUE prof_method_wrap(prof_method_t* method)
 {
@@ -264,7 +272,7 @@ VALUE prof_method_wrap(prof_method_t* method)
     return method->object;
 }
 
-st_table* method_table_create()
+st_table* method_table_create(void)
 {
     return rb_st_init_numtable();
 }
@@ -284,6 +292,30 @@ void method_table_free(st_table* table)
 size_t method_table_insert(st_table* table, st_data_t key, prof_method_t* val)
 {
     return rb_st_insert(table, (st_data_t)key, (st_data_t)val);
+}
+
+static int prof_method_table_merge_internal(st_data_t key, st_data_t value, st_data_t data)
+{
+    st_table* self_table = (st_table*)data;
+    prof_method_t* other_child = (prof_method_t*)value;
+
+    prof_method_t* self_child = method_table_lookup(self_table, other_child->key);
+    if (self_child)
+    {
+        prof_measurement_merge_internal(self_child->measurement, other_child->measurement);
+    }
+    else
+    {
+        prof_method_t* copy = prof_method_copy(other_child);
+        method_table_insert(self_table, copy->key, copy); 
+    }
+  
+    return ST_CONTINUE;
+}
+
+void prof_method_table_merge(st_table* self, st_table* other)
+{   
+  rb_st_foreach(other, prof_method_table_merge_internal, (st_data_t)self);
 }
 
 prof_method_t* method_table_lookup(st_table* table, st_data_t key)
@@ -310,15 +342,52 @@ the RubyProf::Profile object.
 */
 
 /* call-seq:
+   new(klass, method_name) -> method_info
+
+Creates a new MethodInfo instance. +Klass+ should be a reference to
+a Ruby class and +method_name+ a symbol identifying one of its instance methods.*/
+static VALUE prof_method_initialize(VALUE self, VALUE klass, VALUE method_name)
+{
+  prof_method_t* method_ptr = prof_get_method(self);
+  method_ptr->klass = klass;
+  method_ptr->method_name = method_name;
+
+  // Setup method key
+  method_ptr->key = method_key(klass, method_name);
+
+  // Get method object
+  VALUE ruby_method = rb_funcall(klass, rb_intern("instance_method"), 1, method_name);
+
+  // Get source file and line number
+  VALUE location_array = rb_funcall(ruby_method, rb_intern("source_location"), 0);
+  if (location_array != Qnil && RARRAY_LEN(location_array) == 2)
+  {
+    method_ptr->source_file = rb_ary_entry(location_array, 0);
+    method_ptr->source_line = NUM2INT(rb_ary_entry(location_array, 1));
+  }
+
+  return self;
+}
+
+/* call-seq:
+   hash -> hash
+
+Returns the hash key for this method info. The hash key is calculated based on the
+klass name and method name */
+static VALUE prof_method_hash(VALUE self)
+{
+  prof_method_t* method_ptr = prof_get_method(self);
+  return ULL2NUM(method_ptr->key);
+}
+
+/* call-seq:
    allocations -> array
 
 Returns an array of allocation information.*/
 static VALUE prof_method_allocations(VALUE self)
 {
     prof_method_t* method = prof_get_method(self);
-    VALUE result = rb_ary_new();
-    rb_st_foreach(method->allocations_table, prof_method_collect_allocations, result);
-    return result;
+    return prof_allocations_wrap(method->allocations_table);
 }
 
 /* call-seq:
@@ -334,7 +403,7 @@ static VALUE prof_method_measurement(VALUE self)
 /* call-seq:
    source_file => string
 
-return the source file of the method
+Returns the source file of the method
 */
 static VALUE prof_method_source_file(VALUE self)
 {
@@ -353,7 +422,7 @@ static VALUE prof_method_line(VALUE self)
 }
 
 /* call-seq:
-   klass_name -> string
+   klass_name -> String
 
 Returns the name of this method's class.  Singleton classes
 will have the form <Object::Object>. */
@@ -379,9 +448,9 @@ static VALUE prof_method_klass_flags(VALUE self)
 }
 
 /* call-seq:
-   method_name -> string
+   method_name -> Symbol
 
-Returns the name of this method in the format Object#method.  Singletons
+Returns the name of this method in the format Object#method. Singletons
 methods will be returned in the format <Object::Object>#method.*/
 
 static VALUE prof_method_name(VALUE self)
@@ -420,7 +489,7 @@ static VALUE prof_method_dump(VALUE self)
     rb_hash_aset(result, ID2SYM(rb_intern("klass_flags")), INT2FIX(method_data->klass_flags));
     rb_hash_aset(result, ID2SYM(rb_intern("method_name")), method_data->method_name);
 
-    rb_hash_aset(result, ID2SYM(rb_intern("key")), INT2FIX(method_data->key));
+    rb_hash_aset(result, ID2SYM(rb_intern("key")), ULL2NUM(method_data->key));
     rb_hash_aset(result, ID2SYM(rb_intern("recursive")), prof_method_recursive(self));
     rb_hash_aset(result, ID2SYM(rb_intern("source_file")), method_data->source_file);
     rb_hash_aset(result, ID2SYM(rb_intern("source_line")), INT2FIX(method_data->source_line));
@@ -441,7 +510,7 @@ static VALUE prof_method_load(VALUE self, VALUE data)
     method_data->klass_name = rb_hash_aref(data, ID2SYM(rb_intern("klass_name")));
     method_data->klass_flags = FIX2INT(rb_hash_aref(data, ID2SYM(rb_intern("klass_flags"))));
     method_data->method_name = rb_hash_aref(data, ID2SYM(rb_intern("method_name")));
-    method_data->key = FIX2LONG(rb_hash_aref(data, ID2SYM(rb_intern("key"))));
+    method_data->key = RB_NUM2ULL(rb_hash_aref(data, ID2SYM(rb_intern("key"))));
 
     method_data->recursive = rb_hash_aref(data, ID2SYM(rb_intern("recursive"))) == Qtrue ? true : false;
 
@@ -455,22 +524,24 @@ static VALUE prof_method_load(VALUE self, VALUE data)
     method_data->measurement = prof_get_measurement(measurement);
 
     VALUE allocations = rb_hash_aref(data, ID2SYM(rb_intern("allocations")));
-    for (int i = 0; i < rb_array_len(allocations); i++)
-    {
-        VALUE allocation = rb_ary_entry(allocations, i);
-        prof_allocation_t* allocation_data = prof_allocation_get(allocation);
-
-        rb_st_insert(method_data->allocations_table, allocation_data->key, (st_data_t)allocation_data);
-    }
+    prof_allocations_unwrap(method_data->allocations_table, allocations);
     return data;
 }
 
-void rp_init_method_info()
+void rp_init_method_info(void)
 {
     /* MethodInfo */
     cRpMethodInfo = rb_define_class_under(mProf, "MethodInfo", rb_cObject);
-    rb_undef_method(CLASS_OF(cRpMethodInfo), "new");
+
+    rb_define_const(cRpMethodInfo, "MODULE_INCLUDEE", INT2NUM(kModuleIncludee));
+    rb_define_const(cRpMethodInfo, "CLASS_SINGLETON", INT2NUM(kClassSingleton));
+    rb_define_const(cRpMethodInfo, "MODULE_SINGLETON", INT2NUM(kModuleSingleton));
+    rb_define_const(cRpMethodInfo, "OBJECT_SINGLETON", INT2NUM(kObjectSingleton));
+    rb_define_const(cRpMethodInfo, "OTHER_SINGLETON", INT2NUM(kOtherSingleton));
+
     rb_define_alloc_func(cRpMethodInfo, prof_method_allocate);
+    rb_define_method(cRpMethodInfo, "initialize", prof_method_initialize, 2);
+    rb_define_method(cRpMethodInfo, "hash", prof_method_hash, 0);
 
     rb_define_method(cRpMethodInfo, "klass_name", prof_method_klass_name, 0);
     rb_define_method(cRpMethodInfo, "klass_flags", prof_method_klass_flags, 0);

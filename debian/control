@@ -1,26 +1,27 @@
 Source: ruby-prof
 Section: ruby
 Priority: optional
-Maintainer: Debian Ruby Extras Maintainers <pkg-ruby-extras-maintainers@lists.alioth.debian.org>
+Maintainer: Debian Ruby Team <pkg-ruby-extras-maintainers@lists.alioth.debian.org>
 Uploaders: Pirate Praveen <praveen@debian.org>
-Build-Depends: debhelper-compat (= 12),
-               gem2deb (>= 1.1),
+Build-Depends: debhelper-compat (= 13),
+               gem2deb (>= 1.1~),
                rake
-Standards-Version: 4.5.0
+Standards-Version: 4.7.0
 Vcs-Git: https://salsa.debian.org/ruby-team/ruby-prof.git
 Vcs-Browser: https://salsa.debian.org/ruby-team/ruby-prof
 Homepage: https://github.com/ruby-prof/ruby-prof
 Testsuite: autopkgtest-pkg-ruby
+Rules-Requires-Root: no
 XS-Ruby-Versions: all
 
 Package: ruby-prof
 Architecture: any
 XB-Ruby-Versions: ${ruby:Versions}
-Depends: ruby | ruby-interpreter,
+Depends: ${misc:Depends},
+         ${ruby:Depends},
+         ${shlibs:Depends},
          libjs-jquery,
          fonts-lato,
-         ${misc:Depends},
-         ${shlibs:Depends}
 Breaks: gitlab (<< 12.3~)
 Description: Fast Ruby profiler
  ruby-prof is a fast code profiler for Ruby. It is a C extension and

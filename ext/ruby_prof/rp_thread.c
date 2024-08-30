@@ -21,10 +21,11 @@ You cannot create an instance of RubyProf::Thread, instead you access it from a 
 
 VALUE cRpThread;
 
-// ======   thread_data_t  ====== 
+// ======   thread_data_t  ======
 thread_data_t* thread_data_create(void)
 {
     thread_data_t* result = ALLOC(thread_data_t);
+    result->owner = OWNER_C;
     result->stack = prof_stack_create();
     result->method_table = method_table_create();
     result->call_tree = NULL;
@@ -57,18 +58,18 @@ void prof_thread_mark(void* data)
     thread_data_t* thread = (thread_data_t*)data;
 
     if (thread->object != Qnil)
-        rb_gc_mark(thread->object);
+        rb_gc_mark_movable(thread->object);
 
     rb_gc_mark(thread->fiber);
 
     if (thread->methods != Qnil)
-        rb_gc_mark(thread->methods);
+        rb_gc_mark_movable(thread->methods);
 
     if (thread->fiber_id != Qnil)
-        rb_gc_mark(thread->fiber_id);
+        rb_gc_mark_movable(thread->fiber_id);
 
     if (thread->thread_id != Qnil)
-        rb_gc_mark(thread->thread_id);
+        rb_gc_mark_movable(thread->thread_id);
 
     if (thread->call_tree)
         prof_call_tree_mark(thread->call_tree);
@@ -76,13 +77,13 @@ void prof_thread_mark(void* data)
     rb_st_foreach(thread->method_table, mark_methods, 0);
 }
 
-void prof_thread_ruby_gc_free(void* data)
+void prof_thread_compact(void* data)
 {
-    if (data)
-    {
-        thread_data_t* thread_data = (thread_data_t*)data;
-        thread_data->object = Qnil;
-    }
+    thread_data_t* thread = (thread_data_t*)data;
+    thread->object = rb_gc_location(thread->object);
+    thread->methods = rb_gc_location(thread->methods);
+    thread->fiber_id = rb_gc_location(thread->fiber_id);
+    thread->thread_id = rb_gc_location(thread->thread_id);
 }
 
 static void prof_thread_free(thread_data_t* thread_data)
@@ -105,6 +106,27 @@ static void prof_thread_free(thread_data_t* thread_data)
     xfree(thread_data);
 }
 
+void prof_thread_ruby_gc_free(void* data)
+{
+    thread_data_t* thread_data = (thread_data_t*)data;
+
+    if (!thread_data)
+    {
+        // Object has already been freed by C code
+        return;
+    }
+    else if (thread_data->owner == OWNER_RUBY)
+    {
+        // Ruby owns this object, we need to free the underlying C struct
+        prof_thread_free(thread_data);
+    }
+    else
+    {
+        // The Ruby object is being freed, but not the underlying C structure. So unlink the two.
+        thread_data->object = Qnil;
+    }
+}
+
 static const rb_data_type_t thread_type =
 {
     .wrap_struct_name = "ThreadInfo",
@@ -113,6 +135,7 @@ static const rb_data_type_t thread_type =
         .dmark = prof_thread_mark,
         .dfree = prof_thread_ruby_gc_free,
         .dsize = prof_thread_size,
+        .dcompact = prof_thread_compact
     },
     .data = NULL,
     .flags = RUBY_TYPED_FREE_IMMEDIATELY
@@ -130,6 +153,7 @@ VALUE prof_thread_wrap(thread_data_t* thread)
 static VALUE prof_thread_allocate(VALUE klass)
 {
     thread_data_t* thread_data = thread_data_create();
+    thread_data->owner = OWNER_RUBY;
     thread_data->object = prof_thread_wrap(thread_data);
     return thread_data->object;
 }
@@ -146,9 +170,9 @@ thread_data_t* prof_get_thread(VALUE self)
 }
 
 // ======   Thread Table  ======
-// The thread table is hash keyed on ruby fiber_id that stores instances of thread_data_t. 
+// The thread table is hash keyed on ruby fiber_id that stores instances of thread_data_t.
 
-st_table* threads_table_create()
+st_table* threads_table_create(void)
 {
     return rb_st_init_numtable();
 }
@@ -171,7 +195,8 @@ thread_data_t* threads_table_lookup(void* prof, VALUE fiber)
     thread_data_t* result = NULL;
     st_data_t val;
 
-    if (rb_st_lookup(profile->threads_tbl, fiber, &val))
+    VALUE fiber_id = rb_obj_id(fiber);
+    if (rb_st_lookup(profile->threads_tbl, fiber_id, &val))
     {
         result = (thread_data_t*)val;
     }
@@ -188,7 +213,7 @@ thread_data_t* threads_table_insert(void* prof, VALUE fiber)
     result->fiber = fiber;
     result->fiber_id = rb_obj_id(fiber);
     result->thread_id = rb_obj_id(thread);
-    rb_st_insert(profile->threads_tbl, (st_data_t)fiber, (st_data_t)result);
+    rb_st_insert(profile->threads_tbl, (st_data_t)result->fiber_id, (st_data_t)result);
 
     // Are we tracing this thread?
     if (profile->include_threads_tbl && !rb_st_lookup(profile->include_threads_tbl, thread, 0))
@@ -268,6 +293,35 @@ static int collect_methods(st_data_t key, st_data_t value, st_data_t result)
 
 // ======   RubyProf::Thread  ======
 /* call-seq:
+   new(call_tree, thread, fiber) -> thread
+
+Creates a new RubyProf thread instance. +call_tree+ is the root call_tree instance,
++thread+ is a reference to a Ruby thread and +fiber+ is a reference to a Ruby fiber.*/
+static VALUE prof_thread_initialize(VALUE self, VALUE call_tree, VALUE thread, VALUE fiber)
+{
+  thread_data_t* thread_ptr = prof_get_thread(self);
+
+  // This call tree must now be managed by C
+  thread_ptr->call_tree = prof_get_call_tree(call_tree);
+  thread_ptr->call_tree->owner = OWNER_C;
+
+  thread_ptr->fiber = fiber;
+  thread_ptr->fiber_id = rb_obj_id(fiber);
+  thread_ptr->thread_id = rb_obj_id(thread);
+
+  // Add methods from call trees into thread methods table
+  VALUE methods = prof_call_tree_methods(thread_ptr->call_tree);
+  for (int i = 0; i < rb_array_len(methods); i++)
+  {
+      VALUE method = rb_ary_entry(methods, i);
+      prof_method_t* method_ptr = prof_get_method(method);
+      method_table_insert(thread_ptr->method_table, method_ptr->key, method_ptr);
+  }
+
+  return self;
+}
+
+/* call-seq:
    id -> number
 
 Returns the thread id of this thread. */
@@ -290,7 +344,7 @@ static VALUE prof_fiber_id(VALUE self)
 /* call-seq:
    call_tree -> CallTree
 
-Returns the root of the call tree. */
+Returns the root call tree. */
 static VALUE prof_call_tree(VALUE self)
 {
     thread_data_t* thread = prof_get_thread(self);
@@ -313,12 +367,26 @@ static VALUE prof_thread_methods(VALUE self)
     return thread->methods;
 }
 
+static VALUE prof_thread_merge(VALUE self, VALUE other)
+{
+  thread_data_t* self_ptr = prof_get_thread(self);
+  thread_data_t* other_ptr = prof_get_thread(other);
+  prof_method_table_merge(self_ptr->method_table, other_ptr->method_table);
+  prof_call_tree_merge_internal(self_ptr->call_tree, other_ptr->call_tree, self_ptr->method_table);
+
+  // Reset method cache since it just changed
+  self_ptr->methods = Qnil;
+
+  return other;
+}
+
 /* :nodoc: */
 static VALUE prof_thread_dump(VALUE self)
 {
     thread_data_t* thread_data = RTYPEDDATA_DATA(self);
 
     VALUE result = rb_hash_new();
+    rb_hash_aset(result, ID2SYM(rb_intern("owner")), INT2FIX(thread_data->owner));
     rb_hash_aset(result, ID2SYM(rb_intern("fiber_id")), thread_data->fiber_id);
     rb_hash_aset(result, ID2SYM(rb_intern("methods")), prof_thread_methods(self));
     rb_hash_aset(result, ID2SYM(rb_intern("call_tree")), prof_call_tree(self));
@@ -330,6 +398,8 @@ static VALUE prof_thread_dump(VALUE self)
 static VALUE prof_thread_load(VALUE self, VALUE data)
 {
     thread_data_t* thread_data = RTYPEDDATA_DATA(self);
+
+    thread_data->owner = FIX2INT(rb_hash_aref(data, ID2SYM(rb_intern("owner"))));
 
     VALUE call_tree = rb_hash_aref(data, ID2SYM(rb_intern("call_tree")));
     thread_data->call_tree = prof_get_call_tree(call_tree);
@@ -350,13 +420,14 @@ static VALUE prof_thread_load(VALUE self, VALUE data)
 void rp_init_thread(void)
 {
     cRpThread = rb_define_class_under(mProf, "Thread", rb_cObject);
-    rb_undef_method(CLASS_OF(cRpThread), "new");
     rb_define_alloc_func(cRpThread, prof_thread_allocate);
+    rb_define_method(cRpThread, "initialize", prof_thread_initialize, 3);
 
     rb_define_method(cRpThread, "id", prof_thread_id, 0);
     rb_define_method(cRpThread, "call_tree", prof_call_tree, 0);
     rb_define_method(cRpThread, "fiber_id", prof_fiber_id, 0);
     rb_define_method(cRpThread, "methods", prof_thread_methods, 0);
+    rb_define_method(cRpThread, "merge!", prof_thread_merge, 1);
     rb_define_method(cRpThread, "_dump_data", prof_thread_dump, 0);
     rb_define_method(cRpThread, "_load_data", prof_thread_load, 1);
 }

@@ -6,7 +6,7 @@
 #define INITIAL_STACK_SIZE 16
 
 // Creates a stack of prof_frame_t to keep track of timings for active methods.
-prof_stack_t* prof_stack_create()
+prof_stack_t* prof_stack_create(void)
 {
     prof_stack_t* stack = ALLOC(prof_stack_t);
     stack->start = ZALLOC_N(prof_frame_t, INITIAL_STACK_SIZE);
@@ -20,6 +20,14 @@ void prof_stack_free(prof_stack_t* stack)
 {
     xfree(stack->start);
     xfree(stack);
+}
+
+prof_frame_t* prof_stack_parent(prof_stack_t* stack)
+{
+    if (stack->ptr == stack->start || stack->ptr - 1 == stack->start)
+        return NULL;
+    else
+        return stack->ptr - 2;
 }
 
 prof_frame_t* prof_stack_last(prof_stack_t* stack)
@@ -86,8 +94,8 @@ prof_frame_t* prof_frame_current(prof_stack_t* stack)
 
 prof_frame_t* prof_frame_push(prof_stack_t* stack, prof_call_tree_t* call_tree, double measurement, bool paused)
 {
-    prof_frame_t* parent_frame = prof_stack_last(stack);
     prof_frame_t* result = prof_stack_push(stack);
+    prof_frame_t* parent_frame = prof_stack_parent(stack);
 
     result->call_tree = call_tree;
 
@@ -129,7 +137,7 @@ prof_frame_t* prof_frame_push(prof_stack_t* stack, prof_call_tree_t* call_tree, 
 prof_frame_t* prof_frame_unshift(prof_stack_t* stack, prof_call_tree_t* parent_call_tree, prof_call_tree_t* call_tree, double measurement)
 {
     if (prof_stack_last(stack))
-        rb_raise(rb_eRuntimeError, "Stach unshift can only be called with an empty stack");
+        rb_raise(rb_eRuntimeError, "Stack unshift can only be called with an empty stack");
 
     parent_call_tree->measurement->total_time = call_tree->measurement->total_time;
     parent_call_tree->measurement->self_time = 0;
@@ -172,7 +180,7 @@ prof_frame_t* prof_frame_pop(prof_stack_t* stack, double measurement)
         call_tree->measurement->total_time += total_time;
 
     call_tree->visits--;
-    
+
     prof_frame_t* parent_frame = prof_stack_last(stack);
     if (parent_frame)
     {
@@ -187,7 +195,7 @@ prof_frame_t* prof_frame_pop(prof_stack_t* stack, double measurement)
 
 prof_method_t* prof_find_method(prof_stack_t* stack, VALUE source_file, int source_line)
 {
-    prof_frame_t* frame = stack->ptr;
+    prof_frame_t* frame = prof_stack_last(stack);
     while (frame >= stack->start)
     {
         if (!frame->call_tree)

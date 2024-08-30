@@ -1,36 +1,22 @@
 require "mkmf"
 
-if RUBY_ENGINE != "ruby"
-  STDERR.puts("\n\n***** This gem is MRI-specific. It does not support #{RUBY_ENGINE}. *****\n\n")
-  exit(1)
+# Let's go with a modern version of C! want to intermix declarations and code (ie, don't define
+# all variables at the top of the method). If using Visual Studio, you'll need 2019 version
+# 16.8 or higher
+if RUBY_PLATFORM =~ /mswin/
+  $CFLAGS += ' /std:c11'
+else
+  $CFLAGS += ' -std=c11'
 end
 
-if Gem::Version.new(RUBY_VERSION) < Gem::Version.new('2.4.0')
-  STDERR.puts("\n\n***** Ruby version #{RUBY_VERSION} is no longer supported. Please upgrade to 2.3 or higher. *****\n\n")
-  exit(1)
+# For gcc add -s to strip symbols, reducing library size from 17MB to 78KB (at least on Windows with mingw64)
+if RUBY_PLATFORM !~ /mswin/
+  $LDFLAGS += ' -s'
 end
 
-# For the love of bitfields...
-$CFLAGS += ' -std=c99'
-
-# And since we are using C99
-CONFIG['warnflags'].gsub!('-Wdeclaration-after-statement', '')
-
-def add_define(name, value = nil)
-  if value
-    $defs.push("-D#{name}=#{value}")
-  else
-    $defs.push("-D#{name}")
-  end
+# And since we are using C99 we want to disable Ruby sending these warnings to gcc
+if CONFIG['warnflags']
+  CONFIG['warnflags'].gsub!('-Wdeclaration-after-statement', '')
 end
-
-def windows?
-  RbConfig::CONFIG['host_os'] =~ /mswin|mingw/
-end
-
-add_define("RUBY_PROF_RUBY_VERSION", RUBY_VERSION.split('.')[0..2].inject(0){|v,d| v*100+d.to_i})
-
-# This function was added in Ruby 2.5, so once Ruby 2.4 is no longer supported this can be removed
-have_func('rb_tracearg_callee_id', ["ruby.h"])
 
 create_makefile("ruby_prof")

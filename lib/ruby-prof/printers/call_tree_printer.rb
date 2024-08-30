@@ -27,7 +27,7 @@ module RubyProf
 
     def determine_event_specification_and_value_scale
       @event_specification = "events: "
-      case RubyProf.measure_mode
+      case @result.measure_mode
         when RubyProf::PROCESS_TIME
           @value_scale = RubyProf::CLOCKS_PER_SEC
           @event_specification << 'process_time'
@@ -68,8 +68,6 @@ module RubyProf
 
     def print_threads
       remove_subsidiary_files_from_previous_profile_runs
-      # TODO: merge fibers of a given thread here, instead of relying
-      # on the profiler to merge fibers.
       @result.threads.each do |thread|
         print_thread(thread)
       end
@@ -100,21 +98,17 @@ module RubyProf
       true
     end
 
-    def base_name
-      @options[:profile] || "profile"
-    end
-
     def remove_subsidiary_files_from_previous_profile_runs
-      pattern = [base_name, "callgrind.out", $$, "*"].join(".")
+      pattern = ["callgrind.out", $$, "*"].join(".")
       files = Dir.glob(File.join(path, pattern))
       FileUtils.rm_f(files)
     end
 
     def file_name_for_thread(thread)
       if thread.fiber_id == Fiber.current.object_id
-        [base_name, "callgrind.out", $$].join(".")
+        ["callgrind.out", $$].join(".")
       else
-        [base_name, "callgrind.out", $$, thread.fiber_id].join(".")
+        ["callgrind.out", $$, thread.fiber_id].join(".")
       end
     end
 

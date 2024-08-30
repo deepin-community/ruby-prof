@@ -12,6 +12,7 @@ extern VALUE cProfile;
 
 typedef struct prof_profile_t
 {
+    VALUE object;
     VALUE running;
     VALUE paused;
 
@@ -26,7 +27,6 @@ typedef struct prof_profile_t
     thread_data_t* last_thread_data;
     double measurement_at_pause_resume;
     bool allow_exceptions;
-    bool merge_fibers;
 } prof_profile_t;
 
 void rp_init_profile(void);

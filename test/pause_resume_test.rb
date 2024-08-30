@@ -5,26 +5,22 @@ require File.expand_path('../test_helper', __FILE__)
 require_relative 'measure_times'
 
 class PauseResumeTest < TestCase
-  def setup
-    # Need to use wall time for this test due to the sleep calls
-    RubyProf::measure_mode = RubyProf::WALL_TIME
-  end
-
   def test_pause_resume
+    profile = RubyProf::Profile.new(measure_mode: RubyProf::WALL_TIME)
     # Measured
-    RubyProf.start
+    profile.start
     RubyProf::C1.sleep_wait
 
     # Not measured
-    RubyProf.pause
+    profile.pause
     sleep 1
     RubyProf::C1.sleep_wait
 
     # Measured
-    RubyProf.resume
+    profile.resume
     RubyProf::C1.sleep_wait
 
-    result = RubyProf.stop
+    result = profile.stop
 
     # Length should be 3:
     #   PauseResumeTest#test_pause_resume
@@ -59,7 +55,7 @@ class PauseResumeTest < TestCase
 
   # pause/resume in the same frame
   def test_pause_resume_1
-    profile = RubyProf::Profile.new
+    profile = RubyProf::Profile.new(measure_mode: RubyProf::WALL_TIME)
 
     profile.start
     method_1a
@@ -79,7 +75,7 @@ class PauseResumeTest < TestCase
 
   # pause in parent frame, resume in child
   def test_pause_resume_2
-    profile = RubyProf::Profile.new
+    profile = RubyProf::Profile.new(measure_mode: RubyProf::WALL_TIME)
 
     profile.start
     method_2a
@@ -96,7 +92,7 @@ class PauseResumeTest < TestCase
 
   # pause in child frame, resume in parent
   def test_pause_resume_3
-    profile = RubyProf::Profile.new
+    profile = RubyProf::Profile.new(measure_mode: RubyProf::WALL_TIME)
 
     profile.start
     method_3a(profile)
@@ -120,7 +116,7 @@ class PauseResumeTest < TestCase
   end
 
   def test_pause_seq
-    profile = RubyProf::Profile.new
+    profile = RubyProf::Profile.new(measure_mode: RubyProf::WALL_TIME)
     profile.start ; assert !profile.paused?
     profile.pause ; assert profile.paused?
     profile.resume; assert !profile.paused?
@@ -132,7 +128,7 @@ class PauseResumeTest < TestCase
   end
 
   def test_pause_block
-    profile = RubyProf::Profile.new
+    profile = RubyProf::Profile.new(measure_mode: RubyProf::WALL_TIME)
     profile.start
     profile.pause
     assert profile.paused?
@@ -151,7 +147,7 @@ class PauseResumeTest < TestCase
   end
 
   def test_pause_block_with_error
-    profile = RubyProf::Profile.new
+    profile = RubyProf::Profile.new(measure_mode: RubyProf::WALL_TIME)
     profile.start
     profile.pause
     assert profile.paused?
@@ -167,7 +163,7 @@ class PauseResumeTest < TestCase
   end
 
   def test_resume_when_not_paused
-    profile = RubyProf::Profile.new
+    profile = RubyProf::Profile.new(measure_mode: RubyProf::WALL_TIME)
     profile.start ; assert !profile.paused?
     profile.resume; assert !profile.paused?
     profile.stop  ; assert !profile.paused?

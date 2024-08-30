@@ -52,15 +52,24 @@ module RubyProf
       self.total_time - self.self_time - self.wait_time
     end
 
-    # :enddoc:
+    def eql?(other)
+      self.hash == other.hash
+    end
+
+    def ==(other)
+      self.eql?(other)
+    end
+
     def <=>(other)
+      sort_delta = 0.0001
+
       if other.nil?
         -1
       elsif self.full_name == other.full_name
         0
-      elsif self.total_time < other.total_time
+      elsif self.total_time < other.total_time && (self.total_time - other.total_time).abs > sort_delta
         -1
-      elsif self.total_time > other.total_time
+      elsif self.total_time > other.total_time && (self.total_time - other.total_time).abs > sort_delta
         1
       elsif self.call_trees.min_depth < other.call_trees.min_depth
         1

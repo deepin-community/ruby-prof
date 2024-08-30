@@ -29,7 +29,6 @@
 #include "rp_measurement.h"
 #include "rp_method.h"
 #include "rp_call_tree.h"
-#include "rp_aggregate_call_tree.h"
 #include "rp_call_trees.h"
 #include "rp_profile.h"
 #include "rp_stack.h"
@@ -37,13 +36,12 @@
 
 VALUE mProf;
 
-void Init_ruby_prof()
+void Init_ruby_prof(void)
 {
     mProf = rb_define_module("RubyProf");
 
     rp_init_allocation();
     rp_init_call_tree();
-    rp_init_aggregate_call_tree();
     rp_init_call_trees();
     rp_init_measure();
     rp_init_method_info();

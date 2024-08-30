@@ -2,8 +2,8 @@
 # encoding: UTF-8
 
 require File.expand_path('../test_helper', __FILE__)
-require 'stringio'
 require 'fileutils'
+require 'stringio'
 
 # --- code to be tested ---
 module PRGT
@@ -63,9 +63,9 @@ Sort by:
 
 class PrintingRecursiveGraphTest < TestCase
   def setup
+    super
     # WALL_TIME so we can use sleep in our test and get same measurements on linux and windows
-    RubyProf::measure_mode = RubyProf::WALL_TIME
-    @result = RubyProf.profile do
+    @result = RubyProf::Profile.profile(measure_mode: RubyProf::WALL_TIME) do
       PRGT.run
     end
   end

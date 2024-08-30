@@ -4,28 +4,32 @@
 require File.expand_path('../test_helper', __FILE__)
 
 # tests for bugs reported by users
-class BugsTest < TestCase
+class YarvTest < TestCase
   def setup
-    RubyProf::measure_mode = RubyProf::WALL_TIME
+    super
     define_methods
   end
 
   def test_array_push_unoptimized
     a = nil
-    result = RubyProf.profile do
+    result = RubyProf::Profile.profile(measure_mode: RubyProf::WALL_TIME) do
       a = self.array_push_unoptimized
     end
     assert_equal 2, a.length
-    assert_equal ["BugsTest#test_array_push_unoptimized", "BugsTest#array_push_unoptimized", 'Array#<<', "Array#push"], result.threads.first.methods.map(&:full_name)
+    assert_equal ["YarvTest#test_array_push_unoptimized", "YarvTest#array_push_unoptimized", 'Array#<<', "Array#push"], result.threads.first.methods.map(&:full_name)
   end
 
   def test_array_push_optimized
     a = nil
-    result = RubyProf.profile do
+    result = RubyProf::Profile.profile(measure_mode: RubyProf::WALL_TIME) do
       a = self.array_push_optimized
     end
-    assert_equal 2, a.length
-    assert_equal ["BugsTest#test_array_push_optimized", "BugsTest#array_push_optimized", "Array#push"], result.threads.first.methods.map(&:full_name)
+    assert_equal(2, a.length)
+    if Gem::Version.new(RUBY_VERSION) < Gem::Version.new('3.1')
+      assert_equal(["YarvTest#test_array_push_optimized", "YarvTest#array_push_optimized", "Array#push"], result.threads.first.methods.map(&:full_name))
+    else
+      assert_equal(["YarvTest#test_array_push_optimized", "YarvTest#array_push_optimized", "Array#<<", "Array#push"], result.threads.first.methods.map(&:full_name))
+    end
   end
 
   private
