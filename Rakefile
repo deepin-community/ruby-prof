@@ -6,13 +6,6 @@ require "rake/testtask"
 require "rdoc/task"
 require "date"
 require "rake/clean"
-begin
-  require "bundler/setup"
-  Bundler::GemHelper.install_tasks
-  [:build, :install, :release].each {|t| Rake::Task[t].enhance [:rdoc] }
-rescue LoadError
-  $stderr.puts "Install bundler to get support for simplified gem publishing"
-end
 
 # To release a version of ruby-prof:
 #   * Update lib/ruby-prof/version.rb
@@ -23,10 +16,6 @@ end
 #   * rake package to create the gems
 #   * Tag the release (git tag 0.10.1)
 #   * Push to ruybgems.org (gem push pkg/<gem files>)
-# For a ruby only release, just run
-#   * rake release
-# it will push changes to github, tag the release, build the package and upload it to rubygems.org
-# and in case you forgot to increment the version number or have uncommitted changes, it will refuse to work
 
 GEM_NAME = 'ruby-prof'
 SO_NAME = 'ruby_prof'
@@ -38,9 +27,9 @@ Rake::ExtensionTask.new do |ext|
   ext.gem_spec = default_spec
   ext.name = SO_NAME
   ext.ext_dir = "ext/#{SO_NAME}"
-  ext.lib_dir = "lib/#{RUBY_VERSION}"
+  ext.lib_dir = "lib/#{Gem::Version.new(RUBY_VERSION).segments[0..1].join('.')}"
   ext.cross_compile = true
-  ext.cross_platform = ['x86-mingw32', 'x64-mingw32']
+  ext.cross_platform = ['x64-mingw32']
 end
 
 # Rake task to build the default package
@@ -53,12 +42,11 @@ end
 Rake::Task[:package].enhance [:rdoc]
 
 # Setup Windows Gem
-if RUBY_PLATFORM.match(/win32|mingw32/)
+if RUBY_PLATFORM.match(/mswin|mingw/)
   # Windows specification
   win_spec = default_spec.clone
   win_spec.platform = Gem::Platform::CURRENT
   win_spec.files += Dir.glob('lib/**/*.so')
-  win_spec.instance_variable_set(:@cache_file, nil) # Hack to work around gem issue
 
   # Unset extensions
   win_spec.extensions = nil
@@ -73,17 +61,17 @@ end
 desc "Generate rdoc documentation"
 RDoc::Task.new("rdoc") do |rdoc|
   rdoc.rdoc_dir = 'doc'
-  rdoc.title    = "ruby-prof"
+  rdoc.title = "ruby-prof"
   # Show source inline with line numbers
   rdoc.options << "--line-numbers"
   # Make the readme file the start page for the generated html
-  rdoc.options << '--main' << 'README.rdoc'
+  rdoc.options << '--main' << 'README.md'
   rdoc.rdoc_files.include('bin/*',
                           'doc/*.rdoc',
                           'lib/**/*.rb',
                           'ext/ruby_prof/*.c',
                           'ext/ruby_prof/*.h',
-                          'README.rdoc',
+                          'README.md',
                           'LICENSE')
 end
 

@@ -24,14 +24,9 @@ class DynamicMethodTest < TestCase
     end
   end
 
-  def setup
-    # Need to use wall time for this test due to the sleep calls
-    RubyProf::measure_mode = RubyProf::WALL_TIME
-  end
-
   def test_dynamic_method
     medley = FruitMedley.new
-    result = RubyProf.profile do
+    result = RubyProf::Profile.profile(measure_mode: RubyProf::WALL_TIME) do
       medley.apple
       medley.orange
       medley.banana
@@ -39,15 +34,29 @@ class DynamicMethodTest < TestCase
     end
 
     methods = result.threads.first.methods.sort.reverse
-    expected_method_names = %w(
-      DynamicMethodTest#test_dynamic_method
-      Kernel#sleep
-      DynamicMethodTest::FruitMedley#peach
-      DynamicMethodTest::FruitMedley#banana
-      DynamicMethodTest::FruitMedley#orange
-      DynamicMethodTest::FruitMedley#apple
-      Symbol#to_s
-    )
+
+    if Gem::Version.new(RUBY_VERSION) < Gem::Version.new('3.1')
+      expected_method_names = %w(
+        DynamicMethodTest#test_dynamic_method
+        Kernel#sleep
+        DynamicMethodTest::FruitMedley#peach
+        DynamicMethodTest::FruitMedley#banana
+        DynamicMethodTest::FruitMedley#orange
+        DynamicMethodTest::FruitMedley#apple
+        Symbol#to_s
+      )
+    else
+      expected_method_names = %w(
+        DynamicMethodTest#test_dynamic_method
+        Kernel#sleep
+        DynamicMethodTest::FruitMedley#peach
+        DynamicMethodTest::FruitMedley#banana
+        DynamicMethodTest::FruitMedley#orange
+        DynamicMethodTest::FruitMedley#apple
+        Integer#==
+      )
+    end
+
     assert_equal expected_method_names.join("\n"), methods.map(&:full_name).join("\n")
   end
 end

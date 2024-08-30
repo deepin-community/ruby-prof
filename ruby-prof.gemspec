@@ -36,7 +36,7 @@ EOF
   spec.files = Dir['CHANGES',
                    'LICENSE',
                    'Rakefile',
-                   'README.rdoc',
+                   'README.md',
                    'ruby-prof.gemspec',
                    'bin/ruby-prof',
                    'bin/ruby-prof-check-trace',
@@ -56,10 +56,9 @@ EOF
                    'test/*.rb']
 
   spec.test_files = Dir["test/test_*.rb"]
-  spec.required_ruby_version = '>= 2.4.0'
+  spec.required_ruby_version = '>= 3.0.0'
   spec.date = Time.now.strftime('%Y-%m-%d')
   spec.homepage = 'https://github.com/ruby-prof/ruby-prof'
   spec.add_development_dependency('minitest')
   spec.add_development_dependency('rake-compiler')
-  spec.add_development_dependency('rdoc')
 end

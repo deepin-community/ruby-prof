@@ -17,7 +17,7 @@ static double measure_wall_time(rb_trace_arg_t* trace_arg)
 #if defined(_WIN32)
     LARGE_INTEGER time;
     QueryPerformanceCounter(&time);
-    return time.QuadPart;
+    return (double)time.QuadPart;
 #elif defined(__APPLE__)
     return mach_absolute_time();// * (uint64_t)mach_timebase.numer / (uint64_t)mach_timebase.denom;
 #elif defined(__linux__)
@@ -56,7 +56,7 @@ prof_measurer_t* prof_measurer_wall_time(bool track_allocations)
     return measure;
 }
 
-void rp_init_measure_wall_time()
+void rp_init_measure_wall_time(void)
 {
     rb_define_const(mProf, "WALL_TIME", INT2NUM(MEASURE_WALL_TIME));
 

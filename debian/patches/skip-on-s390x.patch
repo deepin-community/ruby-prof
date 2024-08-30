@@ -1,0 +1,20 @@
+From: Debian Ruby Team <pkg-ruby-extras-maintainers@lists.alioth.debian.org>
+Date: Thu, 8 Aug 2024 22:39:25 -0300
+Subject: skip-on-s390x
+
+---
+ test/fiber_test.rb | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/test/fiber_test.rb b/test/fiber_test.rb
+index b93f5e7..e1da5b0 100644
+--- a/test/fiber_test.rb
++++ b/test/fiber_test.rb
+@@ -30,6 +30,7 @@ class FiberTest < TestCase
+   end
+ 
+   def test_fibers
++    skip "Skip on s390x" if(Gem::Platform.local.cpu == "s390x")
+     result = RubyProf::Profile.profile(measure_mode: RubyProf::WALL_TIME) { enumerator_with_fibers }
+ 
+     assert_equal(2, result.threads.size)

@@ -6,6 +6,7 @@ Minitest::Test.i_suck_and_my_tests_are_order_dependent!
 
 class GcTest < TestCase
   def setup
+    super
     GC.stress = true
   end
 
@@ -18,7 +19,7 @@ class GcTest < TestCase
   end
 
   def run_profile
-    RubyProf.profile do
+    RubyProf::Profile.profile do
       self.some_method
     end
   end
@@ -29,11 +30,12 @@ class GcTest < TestCase
       array
     end
 
+    GC.start
+
     threads.each do |thread|
       refute_nil(thread.id)
     end
   end
-
 
   def test_hold_onto_method
     methods = 5.times.reduce(Array.new) do |array, i|
@@ -41,6 +43,8 @@ class GcTest < TestCase
       array.concat(profile.threads.map(&:methods).flatten)
       array
     end
+
+    GC.start
 
     methods.each do |method|
       refute_nil(method.method_name)
@@ -55,20 +59,26 @@ class GcTest < TestCase
       array
     end
 
+    GC.start
+
     method_call_infos.each do |call_trees|
       refute_empty(call_trees.call_trees)
     end
   end
 
   def test_hold_onto_measurements
-    measurements = 5.times.reduce(Array.new) do |array, i|
-      profile = run_profile
-      measurements = profile.threads.map(&:methods).flatten.map(&:measurement)
-      array.concat(measurements)
-      array
-    end
+    # Run a profile
+    profile = run_profile
 
-    measurements.each do |measurement|
+    # Get measurement objects
+    measurements = profile.threads.map(&:methods).flatten.map(&:measurement)
+
+    # Free the profiles which frees the measurements
+    profile = nil
+
+    GC.start
+
+    measurements.each_with_index do |measurement|
       error = assert_raises(RuntimeError) do
         measurement.total_time
       end
@@ -82,6 +92,8 @@ class GcTest < TestCase
       array.concat(run_profile.threads.map(&:call_tree))
       array
     end
+
+    GC.start
 
     call_trees.each do |call_tree|
       refute_nil(call_tree.source_file)

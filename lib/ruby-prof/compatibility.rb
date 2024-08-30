@@ -82,16 +82,6 @@ module RubyProf
   end
 
   # :nodoc:
-  def self.measure_mode_string
-    case measure_mode
-      when WALL_TIME    then "wall_time"
-      when PROCESS_TIME then "process_time"
-      when ALLOCATIONS  then "allocations"
-      when MEMORY       then "memory"
-    end
-  end
-
-  # :nodoc:
   def self.start_script(script)
     start
     load script
@@ -105,5 +95,19 @@ module RubyProf
 
   def self.ensure_not_running!
     raise(RuntimeError, "RubyProf is already running") if running?
+  end
+
+  class << self
+    extend Gem::Deprecate
+    deprecate :measure_mode, "RubyProf::Profile#measure_mode", 2023, 6
+    deprecate :measure_mode=, "RubyProf::Profile#measure_mode=", 2023, 6
+    deprecate :exclude_threads, "RubyProf::Profile#exclude_threads", 2023, 6
+    deprecate :exclude_threads=, "RubyProf::Profile#initialize", 2023, 6
+    deprecate :start, "RubyProf::Profile#start", 2023, 6
+    deprecate :pause, "RubyProf::Profile#pause", 2023, 6
+    deprecate :stop, "RubyProf::Profile#stop", 2023, 6
+    deprecate :resume, "RubyProf::Profile#resume", 2023, 6
+    deprecate :running?, "RubyProf::Profile#running?", 2023, 6
+    deprecate :profile, "RubyProf::Profile.profile", 2023, 6
   end
 end

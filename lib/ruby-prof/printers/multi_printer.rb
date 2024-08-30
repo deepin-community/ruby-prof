@@ -6,16 +6,16 @@ module RubyProf
   # profile, a call stack profile and a graph profile.
   class MultiPrinter
     def initialize(result, printers = [:flat, :graph_html])
-      @flat_printer = FlatPrinter.new(result) if printers.include?(:flat)
+      @flat_printer = printers.include?(:flat) ? FlatPrinter.new(result) : nil
 
-      @graph_printer = GraphPrinter.new(result) if printers.include?(:graph)
-      @graph_html_printer = GraphHtmlPrinter.new(result) if printers.include?(:graph_html)
+      @graph_printer = printers.include?(:graph) ? GraphPrinter.new(result) : nil
+      @graph_html_printer = printers.include?(:graph_html) ? GraphHtmlPrinter.new(result) : nil
 
-      @tree_printer = CallTreePrinter.new(result) if printers.include?(:tree)
-      @call_info_printer = CallInfoPrinter.new(result) if printers.include?(:call_tree)
+      @tree_printer = printers.include?(:tree) ? CallTreePrinter.new(result) : nil
+      @call_info_printer = printers.include?(:call_tree) ? CallInfoPrinter.new(result) : nil
 
-      @stack_printer = CallStackPrinter.new(result) if printers.include?(:stack)
-      @dot_printer = DotPrinter.new(result) if printers.include?(:dot)
+      @stack_printer = printers.include?(:stack) ? CallStackPrinter.new(result) : nil
+      @dot_printer = printers.include?(:dot) ? DotPrinter.new(result) : nil
     end
 
     def self.needs_dir?
@@ -28,7 +28,7 @@ module RubyProf
     def print(options)
       validate_print_params(options)
 
-      @profile = options.delete(:profile) || "profile"
+      @file_name = options.delete(:profile) || "profile"
       @directory = options.delete(:path) || File.expand_path(".")
 
       print_to_flat(options) if @flat_printer
@@ -44,36 +44,36 @@ module RubyProf
 
     # the name of the flat profile file
     def flat_report
-      "#{@directory}/#{@profile}.flat.txt"
+      "#{@directory}/#{@file_name}.flat.txt"
     end
 
     # the name of the graph profile file
     def graph_report
-      "#{@directory}/#{@profile}.graph.txt"
+      "#{@directory}/#{@file_name}.graph.txt"
     end
 
     def graph_html_report
-      "#{@directory}/#{@profile}.graph.html"
+      "#{@directory}/#{@file_name}.graph.html"
     end
 
     # the name of the callinfo profile file
     def call_info_report
-      "#{@directory}/#{@profile}.call_tree.txt"
+      "#{@directory}/#{@file_name}.call_tree.txt"
     end
 
     # the name of the callgrind profile file
     def tree_report
-      "#{@directory}/#{@profile}.callgrind.out.#{$$}"
+      "#{@directory}/#{@file_name}.callgrind.out.#{$$}"
     end
 
     # the name of the call stack profile file
     def stack_report
-      "#{@directory}/#{@profile}.stack.html"
+      "#{@directory}/#{@file_name}.stack.html"
     end
 
     # the name of the call stack profile file
     def dot_report
-      "#{@directory}/#{@profile}.dot"
+      "#{@directory}/#{@file_name}.dot"
     end
 
     def print_to_flat(options)
@@ -101,12 +101,12 @@ module RubyProf
     end
 
     def print_to_tree(options)
-      @tree_printer.print(options.merge(:path => @directory, :profile => @profile))
+      @tree_printer.print(options.merge(:path => @directory, :profile => @file_name))
     end
 
     def print_to_stack(options)
       File.open(stack_report, "wb") do |file|
-        @stack_printer.print(file, options.merge(:graph => "#{@profile}.graph.html"))
+        @stack_printer.print(file, options.merge(:graph => "#{@file_name}.graph.html"))
       end
     end
 

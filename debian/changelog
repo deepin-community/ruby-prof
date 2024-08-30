@@ -1,3 +1,76 @@
+ruby-prof (1.7.0-1) unstable; urgency=medium
+
+  * Team upload.
+  * New upstream release.
+  * Declare compliance with Debian Policy 4.7.0.
+  * Refresh patch.
+
+ -- Lucas Kanashiro <kanashiro@debian.org>  Thu, 08 Aug 2024 22:40:15 -0300
+
+ruby-prof (1.4.5-2) unstable; urgency=high
+
+  * Team upload.
+  * Skip a test on s390x
+
+ -- Nilesh Patra <nilesh@debian.org>  Tue, 07 Feb 2023 02:47:38 +0000
+
+ruby-prof (1.4.5-1) unstable; urgency=medium
+
+  * Team Upload.
+  * New upstream version 1.4.5
+  * Bump Standards-Version to 4.6.2 (no changes needed)
+  * Add "test/printer_graph_test.rb" to skiplist as it looks
+    to be time sensitive and is flaky (Closes: #1020435)
+  * Drop d/p/0001-Fix-requiring-ruby_prof.so-on-Debian.patch
+    (fixed upstream)
+  * debian/ruby-prof.docs: README.rdoc has moved to
+    README.md, install the latter
+
+ -- Nilesh Patra <nilesh@debian.org>  Sun, 05 Feb 2023 15:54:03 +0530
+
+ruby-prof (1.4.3-2) unstable; urgency=medium
+
+  * Team Upload.
+  * d/ruby-tests.rake: Use t.verbose instead of passing
+    verbose in t.options (Closes: #1026512)
+
+ -- Nilesh Patra <nilesh@debian.org>  Fri, 23 Dec 2022 14:54:45 +0530
+
+ruby-prof (1.4.3-1) unstable; urgency=medium
+
+  * Team upload
+
+  [ Debian Janitor ]
+  * Trim trailing whitespace.
+  * Use secure copyright file specification URI.
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
+    Repository-Browse.
+  * Bump debhelper from old 12 to 13.
+  * Update standards version to 4.5.1, no changes needed.
+
+  [ Sruthi Chandran ]
+  * Allow backports versions to satify dependency
+
+  [ Cédric Boutillier ]
+  * Update team name
+  * Add .gitattributes to keep unwanted files out of the source package
+
+  [ Antonio Terceiro ]
+  * New upstream version 1.4.3
+  * debian/rules: install using rubygems layout
+  * debian/control: update with dh-make-ruby
+    - Bump Standards-Version to 4.6.1; no changes needed
+    - Add Rules-Requires-Root: no
+    - Replace explicit dependency on ruby | ruby-interpreter with
+      ${ruby:Depends}
+  * Add patch to make require work on the Debian build
+  * Skip tests that fail under ruby3.1.
+    This has been reported upstream as issue #314
+    Link: https://github.com/ruby-prof/ruby-prof/issues/314
+    (Closes: #1015329)
+
+ -- Antonio Terceiro <terceiro@debian.org>  Thu, 15 Sep 2022 21:56:53 -0300
+
 ruby-prof (1.3.1-2) unstable; urgency=medium
 
   * Team upload.
@@ -64,7 +137,7 @@ ruby-prof (0.17.0+dfsg-1) unstable; urgency=medium
 
 ruby-prof (0.16.2+dfsg-2) unstable; urgency=medium
 
-  * Reupload to unstable 
+  * Reupload to unstable
 
  -- Pirate Praveen <praveen@debian.org>  Fri, 11 Nov 2016 12:02:21 +0530
 

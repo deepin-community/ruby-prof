@@ -50,7 +50,7 @@ module RubyProf
     # options - Hash of print options. Note that each printer can
     # define its own set of options.
     #
-    #   :min_percent - Number 0 to 100 that specifes the minimum
+    #   :min_percent - Number 0 to 100 that specifies the minimum
     #                  %self (the methods self time divided by the
     #                  overall total time) that a method must take
     #                  for it to be printed out in the report.
@@ -99,7 +99,7 @@ module RubyProf
     end
 
     def print_header(thread)
-      @output << "Measure Mode: %s\n" % RubyProf.measure_mode_string
+      @output << "Measure Mode: %s\n" % @result.measure_mode_string
       @output << "Thread ID: %d\n" % thread.id
       @output << "Fiber ID: %d\n" % thread.fiber_id unless thread.id == thread.fiber_id
       @output << "Total: %0.6f\n" % thread.total_time
@@ -113,7 +113,7 @@ module RubyProf
 
     def print_footer(thread)
       @output << <<~EOT
-      
+
         * recursively called methods
 
         Columns are:
@@ -131,6 +131,7 @@ module RubyProf
 
           * MyObject#test - An instance method "test" of the class "MyObject"
           * <Object:MyObject>#test - The <> characters indicate a method on a singleton class.
+
       EOT
     end
   end
